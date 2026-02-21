@@ -1,0 +1,31 @@
+{
+    "system_info": {
+        "os": "Darwin",
+        "os_release": "23.4.0",
+        "architecture": "arm64",
+        "cpu_cores": 10,
+        "total_ram_gb": 32.0
+    },
+    "cpu_benchmark": {
+        "benchmark_type": "CPU Prime Calculation",
+        "limit": 50000,
+        "primes_found": 5133,
+        "execution_time_seconds": 0.0821,
+        "score": 121803
+    },
+    "memory_benchmark": {
+        "benchmark_type": "Memory Allocation & Modification",
+        "elements": 5000000,
+        "allocation_time_seconds": 0.0245,
+        "modification_time_seconds": 0.1552,
+        "total_time_seconds": 0.1797,
+        "operations_per_second": 32216494
+    },
+    "io_benchmark": {
+        "benchmark_type": "Disk I/O 50MB Sequential",
+        "write_time_seconds": 0.0312,
+        "read_time_seconds": 0.0128,
+        "write_speed_MB_s": 1602.56,
+        "read_speed_MB_s": 3906.25
+    }
+}
