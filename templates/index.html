@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Benchmarking Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-900 text-white font-sans antialiased min-h-screen">
+    <div class="max-w-4xl mx-auto py-12 px-6">
+        <header class="mb-10 text-center">
+            <h1
+                class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
+                GenAI Benchmarking Assistant</h1>
+            <p class="mt-4 text-gray-400">Powered by Model Context Protocol (MCP) & Gemini</p>
+        </header>
+
+        <main class="bg-gray-800 rounded-xl shadow-2xl p-8 border border-gray-700">
+            <div class="mb-6 flex space-x-4">
+                <input type="text" id="userPrompt" placeholder="Ask the AI to check your system performance..."
+                    class="flex-grow bg-gray-900 border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition text-emerald-300"
+                    value="Check my system performance and suggest improvements. Make sure to run all CPU, memory, and IO benchmarks for a complete view.">
+                <button id="runBtn"
+                    class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 text-sm rounded-lg transition duration-200 shadow-lg shadow-blue-500/30 flex items-center whitespace-nowrap">
+                    <svg id="spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden"
+                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                        </circle>
+                        <path class="opacity-75" fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                        </path>
+                    </svg>
+                    <span id="btnText">Ask</span>
+                </button>
+            </div>
+
+            <div id="outputContainer" class="hidden animate-fade-in-up">
+                <h3 class="text-xl font-semibold mb-3 text-emerald-400">Execution Log</h3>
+                <div
+                    class="bg-black rounded-lg p-5 font-mono text-sm overflow-y-auto h-[500px] border border-gray-700 shadow-inner">
+                    <pre id="logOutput" class="text-gray-300 whitespace-pre-wrap leading-relaxed"></pre>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.getElementById('runBtn').addEventListener('click', async () => {
+            const userPrompt = document.getElementById('userPrompt').value;
+            const btn = document.getElementById('runBtn');
+            const spinner = document.getElementById('spinner');
+            const btnText = document.getElementById('btnText');
+            const outputContainer = document.getElementById('outputContainer');
+            const logOutput = document.getElementById('logOutput');
+
+            // UI Loading state
+            btn.disabled = true;
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+            spinner.classList.remove('hidden');
+            btnText.innerText = "Asking...";
+            outputContainer.classList.remove('hidden');
+            logOutput.innerHTML = "<span class='text-gray-500'>Initializing MCP Server and connecting to Gemini...</span>\n";
+
+            try {
+                const req = await fetch('/run_benchmark', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: userPrompt })
+                });
+
+                const res = await req.json();
+
+                if (res.error) {
+                    logOutput.innerHTML += `\n<span class="text-red-500">Error: ${res.error}</span>\n\n`;
+                    if (res.stderr) logOutput.innerHTML += `<span class="text-red-400">${res.stderr}</span>`;
+                } else {
+                    let text = res.stdout;
+                    // Escape raw HTML blocks
+                    text = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+                    // Simple regex coloring
+                    text = text.replace(/\[MCP Server Data \].*/g, '<span class="text-purple-400 font-medium">$&</span>');
+                    text = text.replace(/\[AI Requests Exec\].*/g, '<span class="text-blue-400 font-semibold">$&</span>');
+                    text = text.replace(/\[\d+\].*/g, '<span class="text-yellow-400">$&</span>'); // [1] Fetching Tools etc..
+                    text = text.replace(/\[User\]:.*/g, '<span class="text-white font-bold bg-gray-800 p-1 rounded inline-block my-2">$&</span>');
+
+                    // The Final Report formatting
+                    if (text.includes("[AI Analyst Final Report]:")) {
+                        let parts = text.split("[AI Analyst Final Report]:");
+                        parts[1] = `<div class="mt-4 p-4 border border-emerald-500/50 bg-emerald-900/20 rounded-lg"><span class="text-emerald-400 font-bold block mb-2">[AI Analyst Final Report]:</span><span class="text-gray-200">${parts[1]}</span></div>`;
+                        text = parts.join("");
+                    }
+
+                    logOutput.innerHTML += "\n" + text;
+                }
+            } catch (err) {
+                logOutput.innerHTML += `\n<span class="text-red-500">Network Error: ${err.message}</span>`;
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                spinner.classList.add('hidden');
+                btnText.innerText = "Ask";
+                logOutput.scrollTo(0, logOutput.scrollHeight);
+            }
+        });
+    </script>
+</body>
+
+</html>
