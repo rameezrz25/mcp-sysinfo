@@ -56,7 +56,7 @@ class MCPSubprocessClient:
         self.process.stdin.flush()
 
 def main():
-    print("=== GenAI Benchmarking Assistant over MCP (Ollama Phi3) ===\n")
+    print("=== GenAI Benchmarking Assistant over MCP (Ollama LLaMA 3.2) ===\n")
     
     server_path = os.path.join(os.path.dirname(__file__), "mcp_server.py")
     client = MCPSubprocessClient(server_path)
@@ -127,13 +127,13 @@ def main():
         
         try:
             response = ollama.chat(
-                model='phi3',
+                model='llama3.2',
                 messages=messages,
                 tools=ollama_tools
             )
         except Exception as e:
             print(f"\n[Error connecting to Ollama]: {e}")
-            print("Please ensure Ollama is running and 'phi3' model is available (run `ollama pull phi3`).")
+            print("Please ensure Ollama is running and 'llama3.2' model is available (run `ollama pull llama3.2`).")
             break
         
         message = response.get('message', {})

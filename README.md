@@ -12,7 +12,7 @@
 
 Welcome to **`mcp-sysinfo`**! 🌟 This project is a shiny hardware & system benchmarking tool that allows an Artificial Intelligence to run tests and analyze your computer's performance in real time!
 
-If you are a new Python programmer, this is a **fantastic** example of how to connect a large language model (like Ollama Phi3) to actual Python code that runs locally on your machine using the magic of the **Model Context Protocol (MCP)**.
+If you are a new Python programmer, this is a **fantastic** example of how to connect a large language model (like Ollama LLaMA 3.2) to actual Python code that runs locally on your machine using the magic of the **Model Context Protocol (MCP)**.
 
 ---
 
@@ -44,7 +44,7 @@ We use the **Model Context Protocol (MCP)** to keep things perfectly organized a
 ## 📂 Deliverables inside this folder
 
 - 📜 **`mcp_server.py`**: The MCP Server. Exposes system tools like `run_cpu_benchmark()`.
-- 🕹️ **`mcp_client.py`**: The MCP Client. Instantiates Ollama with Phi3, fetches the tools, asks the model to benchmark the system, fields its tool usages, and prints the AI's final system analysis.
+- 🕹️ **`mcp_client.py`**: The MCP Client. Instantiates Ollama with LLaMA 3.2, fetches the tools, asks the model to benchmark the system, fields its tool usages, and prints the AI's final system analysis.
 - 📦 **`sample_benchmark.json`**: An example payload of what the underlying MCP raw tool outputs look like when aggregated.
 
 ---
@@ -55,10 +55,10 @@ We use the **Model Context Protocol (MCP)** to keep things perfectly organized a
    ```bash
    pip install ollama flask python-dotenv
    ```
-2. **Ensure Ollama is running and has the `phi3` model downloaded:**
+2. **Ensure Ollama is running and has the `llama3.2` model downloaded:**
    ```bash
-   ollama pull phi3
-   ollama run phi3
+   ollama pull llama3.2
+   ollama run llama3.2
    ```
 
 ---
@@ -77,7 +77,7 @@ Then, open `http://127.0.0.1:5001/` in your browser. 🌍
 
 **Features:**
 - 💬 Type a custom prompt in the chatbox, e.g., *"Just check my memory and IO speeds."*
-- 🚀 Click **Ask** to let Phi3 run the corresponding tools and stream the insights back!
+- 🚀 Click **Ask** to let LLaMA 3.2 run the corresponding tools and stream the insights back!
 
 ### 💻 CLI Mode
 
@@ -110,7 +110,7 @@ Here are a few different demo command prompts you can try to see how the GenAI c
 ## 🔄 Flow Outcome Recap
 
 1. 🤝 Handshake establishes JSON-RPC connection.
-2. 🔍 Tools are discovered and fed to Phi3's schema parameters.
-3. 🤔 Phi3 decides to use `get_system_info`, `run_cpu_benchmark`, `run_memory_benchmark`, and `run_io_benchmark`.
+2. 🔍 Tools are discovered and fed to LLaMA 3.2's schema parameters.
+3. 🤔 LLaMA 3.2 decides to use `get_system_info`, `run_cpu_benchmark`, `run_memory_benchmark`, and `run_io_benchmark`.
 4. 🏃‍♂️ The isolated MCP server executes these, returning metrics like CPU scores, memory operations/sec, and disk read/write bandwidth in JSON.
-5. 📊 Phi3 digests the JSON structured data and summarizes bottlenecks and insights into a friendly AI Analyst Report!
+5. 📊 LLaMA 3.2 digests the JSON structured data and summarizes bottlenecks and insights into a friendly AI Analyst Report!

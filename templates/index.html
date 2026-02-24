@@ -14,7 +14,7 @@
             <h1
                 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
                 GenAI Benchmarking Assistant</h1>
-            <p class="mt-4 text-gray-400">Powered by Model Context Protocol (MCP) & Ollama Phi3</p>
+            <p class="mt-4 text-gray-400">Powered by Model Context Protocol (MCP) & Ollama LLaMA 3.2</p>
         </header>
 
         <main class="bg-gray-800 rounded-xl shadow-2xl p-8 border border-gray-700">
@@ -61,7 +61,7 @@
             spinner.classList.remove('hidden');
             btnText.innerText = "Asking...";
             outputContainer.classList.remove('hidden');
-            logOutput.innerHTML = "<span class='text-gray-500'>Initializing MCP Server and connecting to Ollama Phi3...</span>\n";
+            logOutput.innerHTML = "<span class='text-gray-500'>Initializing MCP Server and connecting to Ollama LLaMA 3.2...</span>\n";
 
             try {
                 const req = await fetch('/run_benchmark', {
