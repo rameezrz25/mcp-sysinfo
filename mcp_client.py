@@ -4,24 +4,12 @@ import os
 import sys
 import argparse
 
-# Ensure google.generativeai is installed via `pip install google-generativeai`
 try:
-    import google.generativeai as genai
+    import ollama
 except ImportError:
-    print("Error: The 'google-generativeai' package is required.")
-    print("Please install it running: pip install google-generativeai")
+    print("Error: The 'ollama' package is required.")
+    print("Please install it running: pip install ollama")
     sys.exit(1)
-
-from dotenv import load_dotenv
-
-# Connect using API key from .env file
-load_dotenv()
-api_key = os.environ.get("GEMINI_API_KEY")
-if not api_key:
-    print("Error: GEMINI_API_KEY is not set in the .env file.")
-    sys.exit(1)
-
-genai.configure(api_key=api_key)
 
 class MCPSubprocessClient:
     """
@@ -68,7 +56,7 @@ class MCPSubprocessClient:
         self.process.stdin.flush()
 
 def main():
-    print("=== GenAI Benchmarking Assistant over MCP ===\n")
+    print("=== GenAI Benchmarking Assistant over MCP (Ollama Phi3) ===\n")
     
     server_path = os.path.join(os.path.dirname(__file__), "mcp_server.py")
     client = MCPSubprocessClient(server_path)
@@ -93,15 +81,18 @@ def main():
     print(f"    -> Tools exposed: {[t['name'] for t in mcp_tools]}")
     
     # ---------------------------
-    # 3. Connect to Gemini Model
+    # 3. Connect to Ollama Model
     # ---------------------------
     print("[3] Bootstrapping GenAI Controller with exposed tools...")
-    gemini_tools = [{"function_declarations": [
-        {"name": t["name"], "description": t["description"], "parameters": t["inputSchema"]} 
-        for t in mcp_tools
-    ]}]
+    ollama_tools = [{
+        "type": "function",
+        "function": {
+            "name": t["name"],
+            "description": t["description"],
+            "parameters": t["inputSchema"]
+        }
+    } for t in mcp_tools]
     
-    # Use system instructions to strictly behavior-guide the LLM into an analyst persona
     system_instruction = (
         "You are an expert Performance Engineer and Systems Analyst. "
         "The user will ask you to benchmark their system. "
@@ -111,13 +102,6 @@ def main():
         "comparative analyses (e.g., strong vs weak points), and optimization suggestions."
     )
     
-    model = genai.GenerativeModel(
-        model_name="gemini-flash-latest", 
-        tools=gemini_tools,
-        system_instruction=system_instruction
-    )
-    chat = model.start_chat()
-    
     parser = argparse.ArgumentParser(description="GenAI Benchmarking Assistant over MCP")
     parser.add_argument("--prompt", type=str, default="Check my system performance and suggest improvements. Make sure to run all CPU, memory, and IO benchmarks for a complete view.", help="Custom prompt for the assistant")
     args = parser.parse_args()
@@ -125,55 +109,61 @@ def main():
     user_prompt = args.prompt
     print(f"\n[User]: {user_prompt}\n")
     
+    messages = [
+        {"role": "system", "content": system_instruction},
+        {"role": "user", "content": user_prompt}
+    ]
+    
     print("[4] Prompting AI model for tool usage evaluation...")
-    response = chat.send_message(user_prompt)
     
     # ---------------------------
     # 4. Handle Function / Tool Calls Loop
     # ---------------------------
-    # We use a loop because the model might want to call multiple tools sequentially
-    # (or in parallel batches which some APIs handle differently).
     max_turns = 10
     turn = 0
     
     while turn < max_turns:
         turn += 1
-        is_function_call = False
-        function_responses = []
-
-        # Intercept any function execution desires from the model
-        for part in response.parts:
-            if part.function_call:
-                is_function_call = True
-                fn = part.function_call
-                tool_name = fn.name
-                tool_args = {k: v for k, v in fn.args.items()}
-                
-                print(f"\n  [AI Requests Exec] -> {tool_name}({tool_args})")
-                
-                # Forward to MCP Server
-                mcp_res = client.send_request("tools/call", {"name": tool_name, "arguments": tool_args})
-                
-                content = mcp_res.get("result", {}).get("content", [])
-                text_result = content[0]["text"] if content else "{}"
-                
-                print(f"  [MCP Server Data ] -> {text_result}")
-                
-                # Queue the responses to be forwarded back to Gemini
-                function_responses.append({
-                    "function_response": {
-                        "name": tool_name,
-                        "response": {"result": str(text_result)}
-                    }
-                })
-
-        if is_function_call:
-            print("\n  [Uploading results back to AI Controller for analysis...]")
-            response = chat.send_message(function_responses)
-        else:
-            # Model didn't ask for any tools (or finished gathering data) -> final output
-            print(f"\n[AI Analyst Final Report]:\n{'-'*40}\n{response.text.strip()}\n{'-'*40}")
+        
+        try:
+            response = ollama.chat(
+                model='phi3',
+                messages=messages,
+                tools=ollama_tools
+            )
+        except Exception as e:
+            print(f"\n[Error connecting to Ollama]: {e}")
+            print("Please ensure Ollama is running and 'phi3' model is available (run `ollama pull phi3`).")
             break
+        
+        message = response.get('message', {})
+        messages.append(message)
+        
+        if not message.get('tool_calls'):
+            print(f"\n[AI Analyst Final Report]:\n{'-'*40}\n{message.get('content', '').strip()}\n{'-'*40}")
+            break
+        
+        for tool_call in message['tool_calls']:
+            tool_name = tool_call['function']['name']
+            tool_args = tool_call['function']['arguments']
+            
+            print(f"\n  [AI Requests Exec] -> {tool_name}({tool_args})")
+            
+            # Forward to MCP Server
+            mcp_res = client.send_request("tools/call", {"name": tool_name, "arguments": tool_args})
+            
+            content = mcp_res.get("result", {}).get("content", [])
+            text_result = content[0]["text"] if content else "{}"
+            
+            print(f"  [MCP Server Data ] -> {text_result}")
+            
+            messages.append({
+                'role': 'tool',
+                'name': tool_name,
+                'content': str(text_result)
+            })
+            
+        print("\n  [Uploading results back to AI Controller for analysis...]")
 
     # Cleanup
     client.process.terminate()
